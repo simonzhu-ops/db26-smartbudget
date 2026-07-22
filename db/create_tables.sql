@@ -107,3 +107,77 @@
 -- OBSERVE: After creating, INSERT a goal for user_id = 1. Then run:
 --          SELECT * FROM savings_goals WHERE user_id = 1;
 --          You should see current_amount = 0.00 (the default).
+
+
+
+
+
+--  USER TABLE
+--         • user_id    — integer, auto-incrementing primary key
+--                         (use SERIAL in PostgreSQL for auto-increment)
+--         • name       — text up to 100 characters, cannot be empty
+--         • email      — text up to 150 characters, must be unique across all users
+--         • created_at — timestamp that defaults to the current time
+
+    CREATE TABLE users (
+        user_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+-- CATEGORIES TABLE
+--         • category_id — integer, auto-incrementing primary key (SERIAL)
+--         • name        — text up to 50 characters, cannot be NULL
+--         • type        — text up to 10 characters, cannot be NULL
+--       Then add a CHECK constraint on "type" that only allows 'INCOME' or 'EXPENSE'.
+--       Use: CHECK (type IN ('INCOME', 'EXPENSE'))
+
+    CREATE TABLE categories (
+        category_id SERIAL PRIMARY KEY,
+        name VARCHAR(50) NOT NULL,
+        type VARCHAR(10) NOT NULL CHECK (type IN ('INCOME', 'EXPENSE'))
+    );
+
+-- DEPENDENT TABLES ------------------------------
+
+-- Transactions table -------
+--         • txn_id      — integer, auto-incrementing primary key (SERIAL)
+--         • user_id     — integer, NOT NULL, REFERENCES users(user_id)
+--         • category_id — integer, NOT NULL, REFERENCES categories(category_id)
+--         • amount      — numeric(12,2), NOT NULL
+--         • txn_date    — date, NOT NULL, defaults to CURRENT_DATE
+--         • description — text up to 255 characters (optional, can be NULL)
+--         • type        — text up to 10 characters, NOT NULL
+
+--       Add these constraints:
+--         • FOREIGN KEY (user_id) REFERENCES users(user_id)
+--         • FOREIGN KEY (category_id) REFERENCES categories(category_id)
+--         • CHECK (amount > 0)   ← prevents negative or zero transactions
+
+    CREATE TABLE transactions (
+        txn_id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(user_id),
+        category_id INT NOT NULL REFERENCES categories(category_id),
+        amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+        txn_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        description VARCHAR(255),
+        type VARCHAR(10) NOT NULL
+    );
+
+-- Saving goals table -------
+--         • goal_id        — integer, auto-incrementing primary key (SERIAL)
+--         • user_id        — integer, NOT NULL, REFERENCES users(user_id)
+--         • name           — text up to 100 characters, NOT NULL
+--         • target_amount  — numeric(12,2), NOT NULL
+--         • current_amount — numeric(12,2), NOT NULL, default 0.00
+--         • deadline       — date (optional, can be NULL)
+
+    CREATE TABLE savings_goals (
+        goal_id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(user_id),
+        name VARCHAR(100) NOT NULL,
+        target_amount NUMERIC(12,2) NOT NULL,
+        current_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        deadline DATE
+    );
