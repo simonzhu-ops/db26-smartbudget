@@ -1,4 +1,5 @@
 package com.smartbudget.console;
+import com.smartbudget.model.Transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -6,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.InputMismatchException;
+import java.time.format.DateTimeParseException;
+
 
 // ============================================================
 // TICKET-F016 to F019 (Day 2, Sprint 1) — Console Menu Application
@@ -21,9 +24,35 @@ import java.util.InputMismatchException;
 //
 // ============================================================
 public class Main {
+
+    private static final List<Transaction> TXNS = new ArrayList<>();
+
+    private static void seed() {
+        TXNS.add(t(1, 1, 1, "3500.00", "2026-01-01", "January salary",   "INCOME"));
+        TXNS.add(t(2, 1, 3,   "45.20", "2026-01-08", "Groceries",        "EXPENSE"));
+        TXNS.add(t(3, 1, 4,   "25.00", "2026-01-15", "Bus pass",         "EXPENSE"));
+        TXNS.add(t(4, 2, 1, "4200.00", "2026-01-01", "January salary",   "INCOME"));
+        TXNS.add(t(5, 2, 5,  "120.00", "2026-01-20", "Electricity bill", "EXPENSE"));
+        TXNS.add(t(6, 3, 2,  "800.00", "2026-02-05", "Freelance gig",    "INCOME"));
+        TXNS.add(t(7, 3, 3,   "60.00", "2026-02-10", "Restaurant",       "EXPENSE"));
+        TXNS.add(t(8, 1, 1, "3500.00", "2026-02-01", "February salary",  "INCOME"));
+        TXNS.add(t(9, 4, 1, "2800.00", "2026-02-01", "February salary",  "INCOME"));
+        TXNS.add(t(10, 5, 3, "52.00",  "2026-03-05", "Groceries",        "EXPENSE"));
+        System.out.println("Seeded " + TXNS.size() + " transactions");
+    }
+
+    // tiny factory to keep seed() readable
+    private static Transaction t(int id, int uid, int cid, String amt,
+                                 String date, String desc, String type) {
+        return new Transaction(id, uid, cid, new BigDecimal(amt),
+                LocalDate.parse(date), desc, type);
+    }
+
     public static void main(String[] args) {
+
         Scanner sc = new Scanner(System.in);
         boolean running = true;
+        seed();
 
         while (running) {
             System.out.println("\n=== SmartBudget Console ===");
@@ -55,9 +84,97 @@ public class Main {
         System.out.println("Goodbye!");
     }
 
-    private static void listTransactions() { /* F018 */ }
-    private static void addTransaction(Scanner sc) { /* F019 */ }
-    private static void showSummary() { /* F020 */ }
+    private static void listTransactions() {
+         /* F018 */ 
+         if (TXNS.isEmpty()) {
+            System.out.println("(no transactions)");
+            return;
+        }
+    
+        String fmt = "%-5s %-25s %-8s %10s %-12s%n";
+        System.out.printf(fmt, "ID", "Description", "Type", "Amount", "Date");
+        System.out.println("-".repeat(65));
+    
+        String rowFmt = "%-5d %-25s %-8s %10.2f %-12s%n";
+        for (Transaction t : TXNS) {
+            System.out.printf(rowFmt,
+                    t.getTxnId(),
+                    t.getDescription(),
+                    t.getType(),
+                    t.getAmount(),
+                    t.getTxnDate());
+        }
+        System.out.println("-".repeat(65));
+        System.out.println("Total rows: " + TXNS.size());
+    }
+
+    private static void addTransaction(Scanner sc) { 
+        /* F019 */ 
+        System.out.print("Amount: ");
+    BigDecimal amount;
+    try {
+        amount = new BigDecimal(sc.nextLine().trim());
+    } catch (NumberFormatException e) {
+        System.out.println("Invalid number. Transaction not added.");
+        return;
+    }
+    if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+        System.out.println("Amount must be positive. Transaction not added.");
+        return;
+    }
+
+    System.out.print("Date (yyyy-mm-dd): ");
+    LocalDate date;
+    try {
+        date = LocalDate.parse(sc.nextLine().trim());
+    } catch (DateTimeParseException e) {
+        System.out.println("Invalid date format. Transaction not added.");
+        return;
+    }
+    if (date.isAfter(LocalDate.now())) {
+        System.out.println("Date cannot be in the future. Transaction not added.");
+        return;
+    }
+
+    System.out.print("Description: ");
+    String desc = sc.nextLine().trim();
+    if (desc.isEmpty()) {
+        System.out.println("Description required. Transaction not added.");
+        return;
+    }
+
+    System.out.print("Type (INCOME/EXPENSE): ");
+    String type = sc.nextLine().trim().toUpperCase();
+    if (!"INCOME".equals(type) && !"EXPENSE".equals(type)) {
+        System.out.println("Type must be INCOME or EXPENSE. Transaction not added.");
+        return;
+    }
+
+    int nextId = TXNS.size() + 1;
+    TXNS.add(new Transaction(nextId, 1, 1, amount, date, desc, type));
+    System.out.println("Added transaction #" + nextId);
+    }
+    private static void showSummary() {
+         /* F020 */ 
+        BigDecimal income  = BigDecimal.ZERO;
+        BigDecimal expense = BigDecimal.ZERO;
+
+        for (Transaction t : TXNS) {
+            if ("INCOME".equals(t.getType())) {
+                income = income.add(t.getAmount());
+            } else if ("EXPENSE".equals(t.getType())) {
+                expense = expense.add(t.getAmount());
+            }
+        }
+        BigDecimal net = income.subtract(expense);
+
+        System.out.println();
+        System.out.println("=== Summary ===");
+        System.out.printf("Total Income:    %12.2f%n", income);
+        System.out.printf("Total Expenses:  %12.2f%n", expense);
+        System.out.println("-".repeat(28));
+        System.out.printf("Net Balance:     %12.2f%n", net);
+    }
 
 
 
@@ -143,4 +260,5 @@ public class Main {
         //          Try valid data — it should add successfully and appear in the list.13
         
     }
+
 
