@@ -24,6 +24,8 @@ import java.util.List;
 // ============================================================
 public class TransactionDAO {
 
+
+
     // -------------------------------------------------------
     // TODO TICKET-F036: Implement insert(Transaction t)
     // -------------------------------------------------------
@@ -47,6 +49,22 @@ public class TransactionDAO {
     // OBSERVE: After implementing, call insert() with a valid Transaction object.
     //          Then call getAll() — your new record should appear in the list.
 
+    public void insert(Transaction t) throws SQLException {
+        try (Connection c = DatabaseConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(INSERT_SQL)) {
+
+            ps.setLong      (1, t.getUser().getUserId());
+            ps.setLong      (2, t.getCategory().getCategoryId());
+            ps.setBigDecimal(3, t.getAmount());
+            ps.setDate      (4, Date.valueOf(t.getTxnDate()));
+            ps.setString    (5, t.getDescription());
+            ps.setString    (6, t.getType());
+
+            ps.executeUpdate();
+        }
+    }
+
+
     // -------------------------------------------------------
     // TODO TICKET-F037: Implement getAll() → List<Transaction>
     // -------------------------------------------------------
@@ -68,6 +86,19 @@ public class TransactionDAO {
     // OBSERVE: After implementing, call getAll() and print each transaction.
     //          You should see all records from the database.
 
+    public List<Transaction> getAll() throws SQLException {
+        List<Transaction> list = new ArrayList<>();
+        try (Connection c = DatabaseConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(SELECT_ALL_SQL);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+        }
+        return list;
+    }
+
     // -------------------------------------------------------
     // TODO TICKET-F038: Implement getByUserId(int userId) → List<Transaction>
     // -------------------------------------------------------
@@ -87,6 +118,37 @@ public class TransactionDAO {
     // OBSERVE: Call getByUserId(1) — you should only see transactions for user 1.
     //          Call getByUserId(999) — you should get an empty list (no crash).
 
+    public List<Transaction> getByUserId(int userId) throws SQLException {
+        List<Transaction> list = new ArrayList<>();
+        try (Connection c = DatabaseConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(SELECT_BY_USER_SQL)) {
+
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    // -------------------------------------------------------
+    // TICKET-F039: delete(int txnId)
+    // -------------------------------------------------------
+    // Returns the number of rows affected: 1 on success, 0 if no row matched
+    // that id. Deleting a missing row is NOT an error — it's a legitimate
+    // "already gone" answer and callers can act on the return value.
+    public int delete(int txnId) throws SQLException {
+        try (Connection c = DatabaseConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(DELETE_SQL)) {
+
+            ps.setInt(1, txnId);
+            return ps.executeUpdate();
+        }
+    }
+
+
     // -------------------------------------------------------
     // TODO TICKET-F039: Implement delete(int txnId)
     // -------------------------------------------------------
@@ -103,4 +165,23 @@ public class TransactionDAO {
     //
     // OBSERVE: Call delete() with a valid ID, then getAll() — the record should be gone.
     //          Call delete() with a non-existent ID — no crash, just a warning message.
+
+    private static Transaction mapRow(ResultSet rs) throws SQLException {
+        Transaction t = new Transaction();
+        t.setTxnId      (rs.getLong      ("txn_id"));
+
+        User user = new User();
+        user.setUserId(rs.getLong("user_id"));
+        t.setUser(user);
+
+        Category cat = new Category();
+        cat.setCategoryId(rs.getLong("category_id"));
+        t.setCategory(cat);
+
+        t.setAmount     (rs.getBigDecimal("amount"));
+        t.setTxnDate    (rs.getDate      ("txn_date").toLocalDate());
+        t.setDescription(rs.getString    ("description"));
+        t.setType       (rs.getString    ("type"));
+        return t;
+    }
 }
