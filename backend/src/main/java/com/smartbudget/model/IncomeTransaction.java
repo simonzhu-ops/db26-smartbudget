@@ -31,6 +31,10 @@ public class IncomeTransaction extends BaseTransaction {
     // WHY:  This field makes IncomeTransaction different from ExpenseTransaction.
     //       Each subclass adds its own unique data on top of the shared parent fields.
 
+    public IncomeTransaction(int txnId, BigDecimal amount,
+    LocalDate txnDate, String description) {
+super(txnId, amount, txnDate, description);
+}
     // -------------------------------------------------------
     // TODO TICKET-F022: Step 2 — Constructor
     // -------------------------------------------------------
@@ -88,4 +92,9 @@ public class IncomeTransaction extends BaseTransaction {
     //
     // OBSERVE: Print an IncomeTransaction — you should see the parent's fields
     //          PLUS the source field at the end.
+
+    @Override
+    public String getType() {
+        return "INCOME";
+    }
 }
