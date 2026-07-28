@@ -7,11 +7,11 @@ import java.time.LocalDate;
 public class SavingsGoal {
 
     private int goalId;
-    private int userId;
     private String goalName;
     private BigDecimal targetAmount;
     private BigDecimal currentAmount;
     private LocalDate deadline;
+    private int userId;
 
     public SavingsGoal() { }
 

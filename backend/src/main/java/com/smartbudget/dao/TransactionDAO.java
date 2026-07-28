@@ -1,8 +1,8 @@
 package com.smartbudget.dao;
 
 import com.smartbudget.entity.Transaction;
-import com.smartbudget.model.Category;
-import com.smartbudget.model.User;
+import com.smartbudget.entity.Category;
+import com.smartbudget.entity.User;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -26,6 +26,28 @@ import java.util.List;
 //
 // ============================================================
 public class TransactionDAO {
+
+    private static final String INSERT_SQL = """
+            INSERT INTO transactions
+                (user_id, category_id, amount, txn_date, description, type)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
+
+    private static final String SELECT_ALL_SQL = """
+            SELECT txn_id, user_id, category_id, amount, txn_date, description, type
+            FROM   transactions
+            ORDER  BY txn_date DESC, txn_id DESC
+            """;
+
+    private static final String SELECT_BY_USER_SQL = """
+            SELECT txn_id, user_id, category_id, amount, txn_date, description, type
+            FROM   transactions
+            WHERE  user_id = ?
+            ORDER  BY txn_date DESC, txn_id DESC
+            """;
+
+    private static final String DELETE_SQL =
+            "DELETE FROM transactions WHERE txn_id = ?";
 
 
 
@@ -171,7 +193,7 @@ public class TransactionDAO {
 
     private static Transaction mapRow(ResultSet rs) throws SQLException {
         Transaction t = new Transaction();
-        t.setTxnId      (rs.getLong      ("txn_id"));
+        t.setTxnId      (rs.getLong("txn_id"));
 
         User user = new User();
         user.setUserId(rs.getLong("user_id"));
