@@ -1,6 +1,9 @@
 package com.smartbudget.dao;
 
 import com.smartbudget.entity.Transaction;
+import com.smartbudget.model.Category;
+import com.smartbudget.model.User;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

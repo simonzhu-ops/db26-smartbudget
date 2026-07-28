@@ -29,12 +29,12 @@ public class Transaction {
     @JsonIgnoreProperties({"transactions", "savingsGoals"})
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private com.smartbudget.model.User user;
 
     @JsonIgnoreProperties({"transactions"})
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    private com.smartbudget.model.Category category;
 
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be greater than zero")
@@ -55,10 +55,10 @@ public class Transaction {
 
     public Long getTxnId()                         { return txnId; }
     public void setTxnId(Long txnId)               { this.txnId = txnId; }
-    public User getUser()                          { return user; }
-    public void setUser(User user)                 { this.user = user; }
-    public Category getCategory()                  { return category; }
-    public void setCategory(Category category)     { this.category = category; }
+    public com.smartbudget.model.User getUser()                          { return user; }
+    public void setUser(com.smartbudget.model.User user2)                 { this.user = user2; }
+    public com.smartbudget.model.Category getCategory()                  { return category; }
+    public void setCategory(com.smartbudget.model.Category cat)     { this.category = cat; }
     public BigDecimal getAmount()                  { return amount; }
     public void setAmount(BigDecimal amount)       { this.amount = amount; }
     public LocalDate getTxnDate()                  { return txnDate; }

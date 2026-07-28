@@ -16,8 +16,8 @@ public class Category {
 
     public int getCategoryId()
     { return categoryId; }
-    public void setCategoryId(int id)    
-    { this.categoryId = id; }
+    public void setCategoryId(long l)    
+    { this.categoryId = (int) l; }
 
     public String getName()              
     { return name; }
