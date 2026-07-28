@@ -55,3 +55,11 @@ public class DatabaseConnection {
     //          If PostgreSQL is running, it should print "Connected!" without errors.
     //          If PostgreSQL is NOT running, you'll get a connection refused error.
 }
+
+    private DatabaseConnection() { }   // prevent instantiation
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USERNAME, PASSWORD);
+    }
+
+
