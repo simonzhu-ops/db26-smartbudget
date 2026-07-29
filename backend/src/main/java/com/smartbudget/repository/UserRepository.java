@@ -3,6 +3,8 @@ package com.smartbudget.repository;
 import com.smartbudget.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
 
 // ============================================================
 // TICKET-F050 (Day 5, Sprint 4) — User Repository
@@ -66,4 +68,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     //
     // OBSERVE: existsByEmail("alice@db.com") → should return true (seed data).
     //          existsByEmail("new@db.com") → should return false.
+     /** WHERE email = ? */
+     Optional<User> findByEmail(String email);
+
+     /** SELECT EXISTS(SELECT 1 FROM users WHERE email = ?) */
+     boolean existsByEmail(String email);
+ 
+     /** Bonus: WHERE LOWER(name) LIKE LOWER('%search%') */
+     List<User> findByNameContainingIgnoreCase(String search);
 }
