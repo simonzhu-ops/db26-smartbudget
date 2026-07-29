@@ -30,6 +30,39 @@ import java.util.Map;
 // ============================================================
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+        @ExceptionHandler(InvalidTransactionException.class)
+    public ResponseEntity<Map<String,Object>> handleInvalid(InvalidTransactionException e) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "status",    400,
+                    "error",     "Bad Request",
+                    "message",   e.getMessage(),
+                    "timestamp", LocalDateTime.now().toString()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String,Object>> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                    "status",    404,
+                    "error",     "Not Found",
+                    "message",   e.getMessage(),
+                    "timestamp", LocalDateTime.now().toString()));
+    }
+
+    /** Catch-all so the user never sees a raw stacktrace. */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String,Object>> handleOther(Exception e) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                    "status",    500,
+                    "error",     "Internal Server Error",
+                    "message",   e.getClass().getSimpleName() + ": " + e.getMessage(),
+                    "timestamp", LocalDateTime.now().toString()));
+    }
 
     // -------------------------------------------------------
     // TODO TICKET-F065: Step 1 — Handle ResourceNotFoundException → HTTP 404

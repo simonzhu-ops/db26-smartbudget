@@ -98,6 +98,22 @@ public class TransactionController {
         // when the id doesn't exist → GlobalExceptionHandler maps to 404.
         service.delete(id);
     }
+    @GetMapping("/user/{userId}")
+public List<Transaction> getByUser(@PathVariable Long userId) {
+    if (!userRepository.existsById(userId)) {
+        throw new ResourceNotFoundException("User " + userId + " not found");
+    }
+    return repo.findByUser_UserIdOrderByTxnDateDesc(userId);
+}
+@DeleteMapping("/{id}")
+@ResponseStatus(HttpStatus.NO_CONTENT)
+public void delete(@PathVariable Long id) {
+    if (!repo.existsById(id)) {
+        throw new ResourceNotFoundException("Transaction " + id + " not found");
+    }
+    repo.deleteById(id);
+}
+
 }
    
     // -------------------------------------------------------
