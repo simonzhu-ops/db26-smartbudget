@@ -23,8 +23,32 @@ package com.smartbudget.controller;
 //
 // REFERENCE: See CategoryController.java for a working example.
 // ============================================================
+package com.smartbudget.controller;
+
+import com.smartbudget.entity.Transaction;
+import com.smartbudget.repository.TransactionRepository;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+    @RestController
+    @RequestMapping("/api/transactions")
+
+
 public class TransactionController {
 
+
+    private final TransactionRepository repo;
+
+    public TransactionController(TransactionRepository repo) {
+        this.repo = repo;
+    }
+
+    @GetMapping
+    public List<Transaction> getAll() {
+        return repo.findAll();
+    }
+}
+   
     // -------------------------------------------------------
     // TODO TICKET-F056: Step 1 — Add class-level annotations
     // -------------------------------------------------------
