@@ -25,7 +25,8 @@ package com.smartbudget.controller;
 // ============================================================
 
 import com.smartbudget.entity.Transaction;
-import com.smartbudget.repository.TransactionRepository;
+import com.smartbudget.service.TransactionService;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 

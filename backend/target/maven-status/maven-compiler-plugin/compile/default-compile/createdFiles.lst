@@ -1,0 +1,8 @@
+com\smartbudget\model\Transaction.class
+com\smartbudget\console\Main.class
+com\smartbudget\entity\Category.class
+com\smartbudget\controller\SavingsGoalController.class
+com\smartbudget\SmartBudgetApplication.class
+com\smartbudget\repository\CategoryRepository.class
+com\smartbudget\controller\CategoryController.class
+com\smartbudget\config\CorsConfig.class
