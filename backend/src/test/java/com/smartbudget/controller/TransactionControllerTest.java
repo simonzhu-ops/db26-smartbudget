@@ -1,5 +1,16 @@
 package com.smartbudget.controller;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+
 // ============================================================
 // TICKET-F064 to F066 (Day 6, Sprint 5) — Integration Tests with MockMvc
 // ============================================================
@@ -28,7 +39,19 @@ package com.smartbudget.controller;
 // PREREQUISITES: TransactionController must be fully implemented (TICKET-F056 to F059)
 //                with @RestController, @RequestMapping, and all endpoint methods.
 // ============================================================
+@SpringBootTest
+@AutoConfigureMockMvc
 public class TransactionControllerTest {
+
+     @Autowired private MockMvc mockMvc;
+
+    @Test
+    void getAll_returns200AndJsonArray() throws Exception {
+        mockMvc.perform(get("/api/transactions"))
+               .andExpect(status().isOk())
+               .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+               .andExpect(jsonPath("$.length()").value(15));   // 15 seeded txns
+    }
 
     // -------------------------------------------------------
     // TODO TICKET-F064: Step 1 — Add class annotations and inject MockMvc
