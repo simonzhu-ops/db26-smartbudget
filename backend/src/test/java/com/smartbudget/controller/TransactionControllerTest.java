@@ -7,9 +7,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+import static org.hamcrest.Matchers.containsString;
 
 // ============================================================
 // TICKET-F064 to F066 (Day 6, Sprint 5) — Integration Tests with MockMvc
@@ -52,7 +53,74 @@ public class TransactionControllerTest {
                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                .andExpect(jsonPath("$.length()").value(15));   // 15 seeded txns
     }
+@Test
+void createTransaction_validInput_returns201AndPersists() throws Exception {
+    String body = """
+        {
+          "user":     {"userId": 1},
+          "category": {"categoryId": 1},
+          "amount":   100.00,
+          "txnDate":  "2026-05-01",
+          "description": "MockMvc happy path",
+          "type":     "INCOME"
+        }
+        """;
 
+    // Act: create
+    String response = mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+           .andExpect(status().isCreated())
+           .andExpect(jsonPath("$.txnId").isNotEmpty())
+           .andExpect(jsonPath("$.amount").value(100.00))
+           .andExpect(jsonPath("$.description").value("MockMvc happy path"))
+           .andReturn().getResponse().getContentAsString();
+
+    // Extract the new id (Jackson-style):
+    Long newId = new ObjectMapper().readTree(response).get("txnId").asLong();
+
+    // Assert: GET round-trip
+    mockMvc.perform(get("/api/transactions/" + newId))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.description").value("MockMvc happy path"));
+}
+@Test
+void createTransaction_negativeAmount_returns400() throws Exception {
+    String body = """
+        {"user":{"userId":1},"category":{"categoryId":1},
+         "amount":-50.00,"txnDate":"2026-05-01",
+         "description":"bad","type":"EXPENSE"}
+        """;
+    mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message", containsString("amount")));
+}
+
+@Test
+void createTransaction_missingUser_returns404() throws Exception {
+    String body = """
+        {"user":{"userId":9999},"category":{"categoryId":1},
+         "amount":50.00,"txnDate":"2026-05-01",
+         "description":"missing user","type":"EXPENSE"}
+        """;
+    mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message", containsString("User 9999")));
+}
+
+@Test
+void createTransaction_invalidType_returns400() throws Exception {
+    String body = """
+        {"user":{"userId":1},"category":{"categoryId":1},
+         "amount":50.00,"txnDate":"2026-05-01",
+         "description":"oops","type":"BOGUS"}
+        """;
+    mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+           .andExpect(status().isBadRequest());
+}
     // -------------------------------------------------------
     // TODO TICKET-F064: Step 1 — Add class annotations and inject MockMvc
     // -------------------------------------------------------
