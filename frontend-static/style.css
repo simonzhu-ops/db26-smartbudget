@@ -1,0 +1,118 @@
+/* Description: Make the transactions table readable.*/
+/* CSS rules collapsing table borders, zebra-striping even rows, highlighting on hover, and colouring .amount.income green / .amount.expense red. */
+
+:root {
+  --db-blue: #003366;
+  --db-blue-light: #1a4d80;
+  --income: #2e7d32;
+  --expense: #c62828;
+  --bg: #f5f5f5;
+  --card-bg: #ffffff;
+}
+
+ table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin: 1rem 0;
+  }
+  
+  thead {
+    background: var(--db-blue);
+    color: #fff;
+  }
+  
+  th, td {
+    padding: .75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+  }
+
+    th {
+        font-weight: 600;
+        letter-spacing: .02em;
+        text-transform: uppercase;
+        font-size: .8rem;
+    }
+    
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody tr:hover           { background: #eef5fb; }
+    tbody tr:last-child td   { border-bottom: 0; }
+
+    /* Amount cells — coloured by INCOME / EXPENSE class (added by JS) */
+    td.amount         { text-align: right; font-variant-numeric: tabular-nums; }
+    td.amount.income  { color: var(--income);  font-weight: 600; }
+    td.amount.expense { color: var(--expense); font-weight: 600; }
+
+@media (max-width: 768px) {
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+  }
+
+/* ─── Form ─────────────────────────────────────────────── */
+
+form {
+  max-width: 480px;
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+label {
+  display: block;
+  margin: 1rem 0 .25rem;
+  font-weight: 500;
+  font-size: .9rem;
+}
+label:first-of-type { margin-top: 0; }
+
+input, select {
+  width: 100%;
+  padding: .55rem .7rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font: inherit;
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--db-blue);
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, .15);
+}
+
+/* Show :invalid only AFTER the user has tried to submit */
+form.was-submitted input:invalid,
+form.was-submitted select:invalid {
+  border-color: var(--expense);
+  background: #fff5f5;
+}
+
+button[type="submit"] {
+  margin-top: 1.5rem;
+  padding: .75rem 1.75rem;
+  background: var(--db-blue);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background .15s;
+}
+button[type="submit"]:hover  { background: var(--db-blue-light); }
+button[type="submit"]:active { transform: translateY(1px); }
+
+#form-message {
+  margin-top: 1rem;
+  padding: .75rem 1rem;
+  border-radius: var(--radius);
+  display: none;
+}
+#form-message.success { display: block; background: #e8f5e9; color: var(--income); }
+#form-message.error   { display: block; background: #ffebee; color: var(--expense); }
