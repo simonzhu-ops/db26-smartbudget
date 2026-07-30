@@ -24,29 +24,32 @@ package com.smartbudget.controller;
 // REFERENCE: See CategoryController.java for a working example.
 // ============================================================
 
+
+
 import com.smartbudget.entity.Transaction;
-import com.smartbudget.service.TransactionService;
-import org.springframework.http.HttpStatus;
+import com.smartbudget.repository.TransactionRepository;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import java.math.BigDecimal;
+import com.smartbudget.exception.InvalidTransactionException;
+import com.smartbudget.exception.ResourceNotFoundException;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/transactions")
-
-
 public class TransactionController {
 
+    private final TransactionRepository repo;
 
-    private final TransactionService service;
-
-    public TransactionController(TransactionService service) {
-        this.service = service;
+    public TransactionController(TransactionRepository repo) {
+        this.repo = repo;
     }
 
     @GetMapping
     public List<Transaction> getAll() {
-        return service.getAll();
+        return repo.findAll();
     }
+
 
     // -------------------------------------------------------
     // TICKET-F058 — GET /api/transactions/user/{userId}
@@ -54,16 +57,7 @@ public class TransactionController {
     // -------------------------------------------------------
     @GetMapping("/user/{userId}")
     public List<Transaction> getByUser(@PathVariable Long userId) {
-        return service.getByUserId(userId);
-    }
-
-    // -------------------------------------------------------
-    // GET /api/transactions/{id} — helpful sibling to F059,
-    // used by the F066 integration test's round-trip check.
-    // -------------------------------------------------------
-    @GetMapping("/{id}")
-    public Transaction getById(@PathVariable Long id) {
-        return service.getById(id);
+        return repo.findByUser_UserIdOrderByTxnDateDesc(userId);
     }
 
     // -------------------------------------------------------
@@ -76,16 +70,10 @@ public class TransactionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Transaction create(@RequestBody Transaction t) {
-        Long userId     = (t.getUser()     != null) ? t.getUser().getUserId()         : null;
-        Long categoryId = (t.getCategory() != null) ? t.getCategory().getCategoryId() : null;
-        return service.create(
-                userId,
-                categoryId,
-                t.getAmount(),
-                t.getTxnDate(),
-                t.getDescription(),
-                t.getType()
-        );
+        if (t.getAmount() == null || t.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException("amount must be > 0");
+        }
+        return repo.save(t);
     }
 
     // -------------------------------------------------------
@@ -94,26 +82,11 @@ public class TransactionController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        // Delegates to service; service throws ResourceNotFoundException
-        // when the id doesn't exist → GlobalExceptionHandler maps to 404.
-        service.delete(id);
+        if (!repo.existsById(id)) {
+            throw new ResourceNotFoundException("Transaction " + id + " not found");
+        }
+        repo.deleteById(id);
     }
-    @GetMapping("/user/{userId}")
-public List<Transaction> getByUser(@PathVariable Long userId) {
-    if (!userRepository.existsById(userId)) {
-        throw new ResourceNotFoundException("User " + userId + " not found");
-    }
-    return repo.findByUser_UserIdOrderByTxnDateDesc(userId);
-}
-@DeleteMapping("/{id}")
-@ResponseStatus(HttpStatus.NO_CONTENT)
-public void delete(@PathVariable Long id) {
-    if (!repo.existsById(id)) {
-        throw new ResourceNotFoundException("Transaction " + id + " not found");
-    }
-    repo.deleteById(id);
-}
-
 }
    
     // -------------------------------------------------------
