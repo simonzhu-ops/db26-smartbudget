@@ -12,6 +12,17 @@ import SavingsGoals      from './pages/SavingsGoals'
  * Your task is to make each page fetch REAL data from the API
  * by implementing the custom hooks in hooks/useBudgetAPI.js
  */
+
+ function NotFound() {
+  return (
+    <main style={{ padding: "2rem", textAlign: "center" }}>
+      <h1>404 — Page Not Found</h1>
+      <p>The page you’re looking for does not exist.</p>
+      <Link to="/">← Back to Dashboard</Link>
+    </main>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>

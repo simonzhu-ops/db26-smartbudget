@@ -80,6 +80,60 @@ export default function Dashboard() {
                  The numbers should match what you see in GET /api/transactions.
       */}
 
+import { useMemo } from "react";
+
+const MOCK_TRANSACTIONS = [
+  { txnId: 1, type: "INCOME",  amount: 3500.00 },
+  { txnId: 2, type: "EXPENSE", amount:   45.20 },
+  { txnId: 3, type: "EXPENSE", amount:   25.00 },
+  { txnId: 4, type: "INCOME",  amount: 4200.00 },
+];
+
+export default function Dashboard() {
+  const txns = MOCK_TRANSACTIONS;   // F091 will replace with useTransactionData()
+
+  const totals = useMemo(() => {
+    let income = 0, expenses = 0;
+    for (const t of txns) {
+      if (t.type === "INCOME")  income   += Number(t.amount);
+      if (t.type === "EXPENSE") expenses += Number(t.amount);
+    }
+    return { income, expenses, net: income - expenses };
+  }, [txns]);
+
+  const fmt = n => "£" + n.toFixed(2);
+
+  return (
+    <main style={{ padding: "1.5rem", maxWidth: 1100, margin: "0 auto" }}>
+      <h2>Dashboard</h2>
+      <section
+        style={{ display: "grid",
+                 gridTemplateColumns: "repeat(3, 1fr)",
+                 gap: "1rem" }}>
+        <Card label="Total Income"   value={fmt(totals.income)}   color="green" />
+        <Card label="Total Expenses" value={fmt(totals.expenses)} color="red" />
+        <Card label="Net Balance"    value={fmt(totals.net)}
+              color={totals.net < 0 ? "red" : "blue"} />
+      </section>
+    </main>
+  );
+}
+
+function Card({ label, value, color }) {
+  const palette = { green: "#2e7d32", red: "#c62828", blue: "#003366" };
+  return (
+    <article style={{ background: "#fff", padding: "1.25rem",
+                      borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
+      <h3 style={{ margin: 0, color: "#666", fontSize: ".9rem" }}>{label}</h3>
+      <p style={{ margin: ".5rem 0 0", fontSize: "1.75rem",
+                  fontWeight: 600, color: palette[color] }}>{value}</p>
+    </article>
+  );
+}
+
+
+
+
       {/* ------------------------------------------------------- */}
       {/* TODO TICKET-F100 (Day 9): Add monthly summary chart      */}
       {/* ------------------------------------------------------- */}
