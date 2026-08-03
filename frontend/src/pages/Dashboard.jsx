@@ -5,8 +5,6 @@ import MonthlySummaryChart    from '../components/MonthlySummaryChart'
 import { Spinner, ErrorMessage, EmptyState } from '../components/Feedback'
 import { formatCurrency } from '../utils/format'
 
-import MonthlySummaryChart from "components/MonthlySummaryChart.jsx";
-
 // ============================================================
 // Dashboard — the landing page of SmartBudget  [SOLVED for Day 8 + Day 9]
 // ============================================================
@@ -85,29 +83,6 @@ export default function Dashboard() {
         </h3>
         <MonthlySummaryChart transactions={transactions} />
       </section>
-
-import MonthlySummaryChart from "../components/MonthlySummaryChart";
-import { useTransactionData } from "../hooks/useBudgetAPI";
-
-export default function Dashboard() {
-  const { data: txns = [], loading, error } = useTransactionData();
-
-  if (loading) return <Spinner />;
-  if (error)   return <ErrorBanner message={error.message} />;
-
-  return (
-    <main className="page">
-      <h2>Dashboard</h2>
-      {/* ... summary cards ... */}
-      <section style={{ background: "#fff", padding: "1rem",
-                        borderRadius: 8, marginTop: "2rem",
-                        boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
-        <h3>Monthly Income vs Expenses</h3>
-        <MonthlySummaryChart transactions={txns} />
-      </section>
-    </main>
-  );
-}
 
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <Link to="/add"          className="btn btn-primary">+ Add Transaction</Link>
