@@ -45,6 +45,37 @@ export default function MonthlySummaryChart({ transactions = [] }) {
   // OBSERVE: Console.log the result to verify the shape:
   //          [{ month: "2026-01", income: 3500, expense: 1200 }, ...]
 
+
+  const data = useMemo(() => {
+    const map = {}
+    for (const t of transactions) {
+      const month = (t.txnDate ?? '').substring(0, 7) // "YYYY-MM"
+      if (!month) continue
+      if (!map[month]) map[month] = { month, income: 0, expense: 0 }
+      const amt = Number(t.amount) || 0
+      if (t.type === 'INCOME')  map[month].income  += amt
+      if (t.type === 'EXPENSE') map[month].expense += amt
+    }
+    return Object.values(map)
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .map(d => ({
+        ...d,
+        income:  Math.round(d.income  * 100) / 100,
+        expense: Math.round(d.expense * 100) / 100,
+      }))
+  }, [transactions])
+
+
+  if (data.length === 0) {
+    return (
+      <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
+        No data to chart yet.
+      </p>
+    )
+  }
+
+
+
   // -------------------------------------------------------
   // TODO TICKET-F100: Step 2 — Render the Recharts bar chart
   // -------------------------------------------------------
@@ -76,9 +107,23 @@ export default function MonthlySummaryChart({ transactions = [] }) {
   //          Hover over a bar — the tooltip should show the exact amount.
   //          Resize the browser — the chart should resize responsively.
 
-  return (
-    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
-      TODO TICKET-F100: Implement the Recharts bar chart
-    </div>
-  )
+
+return (
+  <ResponsiveContainer width="100%" height={320}>
+    <BarChart data={data} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="month" />
+      <YAxis tickFormatter={v => '£' + v} />
+      <Tooltip
+        formatter={(value, key) => [
+          '£' + Number(value).toFixed(2),
+          key.charAt(0).toUpperCase() + key.slice(1),
+        ]}
+      />
+      <Legend />
+      <Bar dataKey="income"  fill="var(--success)" name="Income" />
+      <Bar dataKey="expense" fill="var(--danger)"  name="Expense" />
+    </BarChart>
+  </ResponsiveContainer>
+)
 }
