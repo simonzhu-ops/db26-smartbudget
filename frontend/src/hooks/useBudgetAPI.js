@@ -32,6 +32,32 @@ import { useState, useEffect, useCallback } from 'react'
 //   5. refetch() allows the component to manually trigger a re-fetch (e.g., after a delete)
 //
 // ============================================================
+function useFetch(url) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(json => { if (!cancelled) setData(json); })
+      .catch(err  => { if (!cancelled) setError(err); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    // Cleanup: if the component unmounts before fetch settles,
+    // don't call setState (avoids the React warning).
+    return () => { cancelled = true; };
+  }, [url]);
+
+  return { data, loading, error };
+}
 
 // -------------------------------------------------------
 // TODO TICKET-F091: Step 1 — Implement useTransactionData()
@@ -64,49 +90,80 @@ import { useState, useEffect, useCallback } from 'react'
 //          a spinner. After loading, you should see transaction data.
 //          If the backend is down, you should see an error message.
 export function useTransactionData() {
-  // TODO TICKET-F091: Implement as described above
+  const [transactions, setTransactions] = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState(null)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/transactions')
+      if (!res.ok) throw new Error(`Failed to load transactions (HTTP ${res.status})`)
+      const data = await res.json()
+      setTransactions(data)
+    } catch (err) {
+      setError(err.message || 'Network error')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { transactions, loading, error, refetch: fetchData }
 }
 
+
 // -------------------------------------------------------
-// TODO TICKET-F091: Step 2 — Implement useSavingsGoals(userId)
+// TICKET-F091: Step 2 — useSavingsGoals(userId)
 // -------------------------------------------------------
-// WHAT: Fetches savings goals for a specific user from GET /api/goals/user/{userId}.
-//       Returns { goals, loading, error, refetch }.
-//
-// HOW:  Same pattern as useTransactionData, but:
-//       1. Accept a userId parameter
-//       2. Fetch from `/api/goals/user/${userId}` (template literal with backticks)
-//       3. Use [userId] in the useCallback dependency array — so if userId changes,
-//          the hook re-fetches goals for the new user
-//       4. State variable should be called "goals" instead of "transactions"
-//
-// WHY:  The SavingsGoals page needs to show goals for the currently logged-in user.
-//       Passing userId as a parameter makes the hook flexible — it works for any user.
-//
-// OBSERVE: Import in SavingsGoals.jsx with userId=1.
-//          Should show the seed goals for user 1 from the database.
+// Fetches savings goals for a specific user from GET /api/goals/user/{userId}.
+// Returns { goals, loading, error, refetch }.
 export function useSavingsGoals(userId) {
-  // TODO TICKET-F091: Implement as described above
+  const [goals,   setGoals]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(null)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/goals/user/${userId}`)
+      if (!res.ok) throw new Error(`Failed to load goals (HTTP ${res.status})`)
+      const data = await res.json()
+      setGoals(data)
+    } catch (err) {
+      setError(err.message || 'Network error')
+    } finally {
+      setLoading(false)
+    }
+  }, [userId])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  return { goals, loading, error, refetch: fetchData }
 }
 
+
 // -------------------------------------------------------
-// TODO TICKET-F091: Step 3 — Implement useCategories()
+// TICKET-F091: Step 3 — useCategories()
 // -------------------------------------------------------
-// WHAT: Fetches all categories from GET /api/categories.
-//       Returns just the categories array (simpler than the other hooks).
-//
-// HOW:  1. Create a state variable: categories (starts as empty array)
-//       2. Use useEffect to fetch '/api/categories' when the component mounts
-//       3. Parse the JSON and set categories
-//       4. Return the categories array directly
-//       This hook is simpler because categories rarely change — no loading/error
-//       states needed (though you can add them for polish).
-//
-// WHY:  The AddTransactionForm needs a list of categories for its dropdown.
-//       Without this hook, you'd hardcode categories or repeat fetch logic in the form.
-//
-// OBSERVE: Import in AddTransactionForm.jsx.
-//          The category dropdown should populate with Salary, Groceries, Rent, etc.
+// Fetches all categories from GET /api/categories.
+// Returns just the categories array — categories rarely change,
+// so we skip the loading/error surface (the AddTransactionForm
+// happily renders an empty dropdown while the fetch is in flight).
 export function useCategories() {
-  // TODO TICKET-F091: Implement as described above
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/categories')
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => { if (!cancelled) setCategories(data) })
+      .catch(() => { /* silently ignore — dropdown just stays empty */ })
+    return () => { cancelled = true }
+  }, [])
+
+  return categories
 }

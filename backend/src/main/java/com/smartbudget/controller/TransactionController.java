@@ -87,6 +87,18 @@ public class TransactionController {
         }
         repo.deleteById(id);
     }
+    
+    @PutMapping("/{id}")
+    public Transaction update(@PathVariable Long id,
+                              @RequestBody Transaction body) {
+        return service.update(
+                id,
+                body.getAmount(),
+                body.getTxnDate(),
+                body.getDescription(),
+                body.getType()
+        );
+    }
 }
    
     // -------------------------------------------------------
