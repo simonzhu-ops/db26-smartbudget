@@ -1,4 +1,33 @@
-# ============================================================
+# syntax=docker/dockerfile:1.6
+
+# ─── Stage 1: build ──────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-25 AS build
+
+WORKDIR /app
+
+# Copy pom.xml first so dependency download is cached separately from source changes
+COPY pom.xml .
+RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:resolve
+
+COPY src ./src
+RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests
+
+# ─── Stage 2: run ────────────────────────────────────────
+FROM eclipse-temurin:25-jre-alpine
+
+WORKDIR /app
+
+# Run as non-root for security
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+COPY --from=build --chown=spring:spring /app/target/*.jar app.jar
+
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java","-XX:+ExitOnOutOfMemoryError","-jar","app.jar"]# ============================================================
 # TICKET-F108 (Day 10, Sprint 9) — Backend Dockerfile (Multi-Stage Build)
 # ============================================================
 #
