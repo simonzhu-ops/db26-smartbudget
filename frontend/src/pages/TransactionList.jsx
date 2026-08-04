@@ -1,123 +1,407 @@
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useTransactionData } from '../hooks/useBudgetAPI'
+import { Spinner, ErrorMessage, EmptyState, Toast } from '../components/Feedback'
+import { formatCurrency, formatDate } from '../utils/format'
 
 // ============================================================
-// TICKET-F086/F087/F098/F102 (Day 8-9) — Transaction List Page
+// TransactionList — SOLVED for Day 8 + Day 9
 // ============================================================
 //
-// WHAT: This page displays all transactions in a sortable, filterable table.
-//       It's the main data view of the application.
+// Day 8:
+//   F086 — fetch + render table via useTransactionData()
+//   F087 — delete rows with confirmation + refetch
 //
-// WHY:  Users need to see their transaction history, search for specific entries,
-//       and perform actions (edit, delete) on individual records.
+// Day 9:
+//   F095 — filter by type (INCOME / EXPENSE / ALL)
+//   F096 — filter by date range (from / to)
+//   F097 — case-insensitive search by description
+//   F098 — grouped filter bar + Clear Filters + "Showing X of Y"
+//   F102 — inline edit row driven by editingId + PUT /api/transactions/{id}
+//   F104 — toast notifications for delete / save / errors
+//   F105 — EmptyState when the list is empty (or filters exclude all rows)
+//   F106 — currency & date rendered via formatCurrency / formatDate
 //
 // ============================================================
-
 export default function TransactionList() {
+  const { transactions, loading, error, refetch } = useTransactionData()
 
-  // -------------------------------------------------------
-  // TODO TICKET-F086 (Day 8): Step 1 — Fetch and display transactions
-  // -------------------------------------------------------
-  // WHAT: Use the custom hook to fetch transactions from the API
-  //       and display them in an HTML table.
-  //
-  // HOW:  1. Import useTransactionData from '../hooks/useBudgetAPI'
-  //       2. Call it at the top: const { transactions, loading, error, refetch } = useTransactionData()
-  //       3. Import Spinner and ErrorMessage from '../components/Feedback'
-  //       4. If loading is true, return <Spinner />
-  //       5. If error exists, return <ErrorMessage message={error} />
-  //       6. Render a <table> with columns: ID, Date, Category, Description, Amount, Type, Actions
-  //       7. Use transactions.map() to render one <tr> per transaction
-  //       8. Access nested fields: t.category?.name (the ?. prevents crashes if category is null)
-  //       9. Color the amount: green for INCOME, red for EXPENSE
-  //          Use inline style: style={{ color: t.type === 'INCOME' ? 'var(--success)' : 'var(--danger)' }}
-  //      10. Add a type badge: <span className={`badge badge--${t.type.toLowerCase()}`}>{t.type}</span>
-  //
-  // WHY:  This is a core React pattern: fetch data → check loading state → render.
-  //       The ?. (optional chaining) prevents "Cannot read property of undefined" errors.
-  //       Conditional rendering ({loading && <Spinner />}) is how React handles UI states.
-  //
-  // OBSERVE: The table should show all transactions from the database.
-  //          Amounts should be green (income) or red (expense).
-  //          While the API loads, a spinner should appear briefly.
+  // --- Filter state (F095/F096/F097) ---
+  const [typeFilter, setTypeFilter] = useState('ALL')
+  const [from,       setFrom]       = useState('')
+  const [to,         setTo]         = useState('')
+  const [search,     setSearch]     = useState('')
 
-  // -------------------------------------------------------
-  // TODO TICKET-F087 (Day 8): Step 2 — Add delete functionality
-  // -------------------------------------------------------
-  // WHAT: Each table row gets a "Delete" button that removes the transaction.
-  //
-  // HOW:  1. Create a handleDelete(id) async function
-  //       2. Show a confirmation dialog: if (!window.confirm('Delete this transaction?')) return
-  //       3. Call fetch(`/api/transactions/${id}`, { method: 'DELETE' })
-  //       4. If the response is OK, call refetch() to refresh the table
-  //       5. If it fails, show an error (alert or toast)
-  //       6. Add a "Delete" button in the Actions column of each row
-  //          onClick={() => handleDelete(t.txnId)}
-  //
-  // WHY:  Delete requires a confirmation to prevent accidental data loss.
-  //       After deleting, refetch() re-calls the API and React re-renders
-  //       the table without the deleted row. No page reload needed.
-  //
-  // OBSERVE: Click Delete on a transaction → confirm → the row should disappear.
-  //          Check the API: GET /api/transactions — the deleted one should be gone.
+  // --- Edit state (F102) ---
+  const [editingId,  setEditingId]  = useState(null)
+  const [editValues, setEditValues] = useState({ amount: '', description: '', type: 'EXPENSE' })
 
-  // -------------------------------------------------------
-  // TODO TICKET-F098 (Day 9): Step 3 — Add filter bar
-  // -------------------------------------------------------
-  // WHAT: A filter section above the table with:
-  //       - Category dropdown (filter by category)
-  //       - Date range inputs (from date, to date)
-  //       - Search input (filter by description keyword)
-  //
-  // HOW:  1. Add state variables for each filter: filterCategory, filterFrom, filterTo, searchTerm
-  //       2. Use useMemo to create a "filteredTransactions" array that applies all filters
-  //       3. Filter logic (inside useMemo):
-  //          - If filterCategory is set, keep only transactions where category.name matches
-  //          - If filterFrom is set, keep only transactions where txnDate >= filterFrom
-  //          - If searchTerm is set, keep only transactions where description includes the term
-  //       4. Render the table using filteredTransactions instead of transactions
-  //       5. Render filter inputs above the table, each with onChange updating state
-  //
-  // WHY:  Filtering happens client-side (in the browser) because we already have all data.
-  //       useMemo caches the filtered result so it only recalculates when filters or data change.
-  //       This is faster than calling the API with filter parameters for every keystroke.
-  //
-  // OBSERVE: Type in the search box — the table should update instantly (no API calls).
-  //          Select a category — only matching transactions should appear.
+  // --- Toast state (F104) ---
+  const [toast,      setToast]      = useState(null)
 
-  // -------------------------------------------------------
-  // TODO TICKET-F102 (Day 9): Step 4 — Add edit functionality
-  // -------------------------------------------------------
-  // WHAT: Each table row gets an "Edit" button that allows inline editing.
-  //
-  // HOW:  1. Add state for the currently editing transaction: editingId, editForm
-  //       2. When Edit is clicked, set editingId to that row's ID
-  //          and populate editForm with the current values
-  //       3. In the table, if row ID === editingId, show input fields instead of text
-  //       4. Add Save/Cancel buttons in the editing row
-  //       5. On Save, call PUT /api/transactions/{id} with the updated data
-  //       6. On success, call refetch() and clear editingId
-  //
-  // WHY:  Inline editing is a better UX than navigating to a separate edit page.
-  //       The user sees the change immediately in context.
-  //
-  // OBSERVE: Click Edit → fields should become editable → change the amount →
-  //          click Save → the row should update with the new value.
+  // --------------------------------------------------------
+  // Derived list — memoised so the filter chain doesn't rerun
+  // on every keystroke elsewhere in the page.
+  // --------------------------------------------------------
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return transactions
+      .filter(t => typeFilter === 'ALL' || t.type === typeFilter)
+      .filter(t => !from || (t.txnDate ?? '') >= from)
+      .filter(t => !to   || (t.txnDate ?? '') <= to)
+      .filter(t => !q    || (t.description ?? '').toLowerCase().includes(q))
+  }, [transactions, typeFilter, from, to, search])
+
+  function clearAll() {
+    setTypeFilter('ALL')
+    setFrom('')
+    setTo('')
+    setSearch('')
+  }
+  const hasFilters = typeFilter !== 'ALL' || from || to || search
+
+  // --------------------------------------------------------
+  // F087 — delete with confirmation + toast
+  // --------------------------------------------------------
+  async function handleDelete(id) {
+    if (!window.confirm('Delete this transaction?')) return
+    try {
+      const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setToast({ type: 'success', message: 'Transaction deleted' })
+      await refetch()
+    } catch (err) {
+      setToast({ type: 'error', message: `Delete failed: ${err.message}` })
+    }
+  }
+
+  // --------------------------------------------------------
+  // F102 — edit helpers
+  // --------------------------------------------------------
+  function startEdit(t) {
+    setEditingId(t.txnId)
+    setEditValues({
+      amount:      String(t.amount ?? ''),
+      description: t.description ?? '',
+      type:        t.type ?? 'EXPENSE',
+    })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
+
+  async function saveEdit(t) {
+    const amount = parseFloat(editValues.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setToast({ type: 'error', message: 'Amount must be a positive number' })
+      return
+    }
+    try {
+      const res = await fetch(`/api/transactions/${t.txnId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          amount,
+          txnDate:     t.txnDate,
+          description: editValues.description,
+          type:        editValues.type,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.message || `HTTP ${res.status}`)
+      }
+      setEditingId(null)
+      setToast({ type: 'success', message: 'Transaction updated' })
+      await refetch()
+    } catch (err) {
+      setToast({ type: 'error', message: `Update failed: ${err.message}` })
+    }
+  }
+
+  // --------------------------------------------------------
+  // Render
+  // --------------------------------------------------------
+  if (loading) return <Spinner />
+  if (error)   return <ErrorMessage message={error} />
+
+  // F105 — completely empty database.
+  if (transactions.length === 0) {
+    return (
+      <div>
+        <div style={headerRow}>
+          <h1 style={{ color: 'var(--primary)' }}>Transactions</h1>
+          <Link to="/add" className="btn btn-primary">+ Add Transaction</Link>
+        </div>
+        <EmptyState
+          title="No transactions yet"
+          body="Start tracking your money — add your first transaction."
+          ctaLabel="+ Add Transaction"
+          ctaTo="/add"
+        />
+        <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ color: 'var(--primary)' }}>Transactions</h1>
+      <div style={headerRow}>
+        <h1 style={{ color: 'var(--primary)' }}>
+          Transactions
+          <span style={badgeStyle} aria-label={`${transactions.length} total`}>
+            {transactions.length}
+          </span>
+        </h1>
         <Link to="/add" className="btn btn-primary">+ Add Transaction</Link>
       </div>
 
-      <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-        <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          Build this page in <strong>Sprint 7 (Day 8)</strong>
-        </p>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          TICKET-F086: Fetch transactions using <code>useTransactionData()</code> hook and display in a table
-        </p>
-      </div>
+      {/* ---------------------------------------------- */}
+      {/* F098 — Filter bar (type / date range / search) */}
+      {/* ---------------------------------------------- */}
+      <FilterBar
+        typeFilter={typeFilter} setTypeFilter={setTypeFilter}
+        from={from} setFrom={setFrom}
+        to={to}     setTo={setTo}
+        search={search} setSearch={setSearch}
+        onClear={clearAll}
+        hasFilters={hasFilters}
+        visibleCount={filtered.length}
+        totalCount={transactions.length}
+      />
+
+      {/* ---------------------------------------------- */}
+      {/* F105 — filter results empty state              */}
+      {/* ---------------------------------------------- */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          title="No matches"
+          body="No transactions match your current filters."
+          ctaLabel="Clear filters"
+          onCta={clearAll}
+        />
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Type</th>
+                <th style={{ textAlign: 'right' }}>Amount</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(t =>
+                editingId === t.txnId
+                  ? (
+                    <tr key={t.txnId}>
+                      <td>{formatDate(t.txnDate)}</td>
+                      <td>
+                        <input
+                          aria-label="Description"
+                          value={editValues.description}
+                          onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))}
+                          style={editInputStyle}
+                        />
+                      </td>
+                      <td>{t.category?.name}</td>
+                      <td>
+                        <select
+                          aria-label="Type"
+                          value={editValues.type}
+                          onChange={e => setEditValues(v => ({ ...v, type: e.target.value }))}
+                          style={editInputStyle}
+                        >
+                          <option value="INCOME">INCOME</option>
+                          <option value="EXPENSE">EXPENSE</option>
+                        </select>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <input
+                          aria-label="Amount"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={editValues.amount}
+                          onChange={e => setEditValues(v => ({ ...v, amount: e.target.value }))}
+                          style={{ ...editInputStyle, textAlign: 'right', width: '7rem' }}
+                        />
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button className="btn btn-success"   style={rowBtn} onClick={() => saveEdit(t)}>Save</button>
+                        <button className="btn btn-secondary" style={rowBtn} onClick={cancelEdit}>Cancel</button>
+                      </td>
+                    </tr>
+                  )
+                  : (
+                    <tr key={t.txnId}>
+                      <td>{formatDate(t.txnDate)}</td>
+                      <td>{t.description}</td>
+                      <td>{t.category?.name}</td>
+                      <td>
+                        <span className={`badge badge--${(t.type ?? '').toLowerCase()}`}>{t.type}</span>
+                      </td>
+                      <td
+                        style={{
+                          textAlign: 'right',
+                          color: t.type === 'INCOME' ? 'var(--success)' : 'var(--danger)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {formatCurrency(t.amount)}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={rowBtn}
+                          onClick={() => startEdit(t)}
+                          aria-label={`Edit transaction ${t.txnId}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          style={rowBtn}
+                          onClick={() => handleDelete(t.txnId)}
+                          aria-label={`Delete transaction ${t.txnId}`}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Toast message={toast?.message} type={toast?.type} onClose={() => setToast(null)} />
     </div>
   )
+}
+
+// ============================================================
+// TICKET-F098 — FilterBar sub-component
+// ============================================================
+function FilterBar({
+  typeFilter, setTypeFilter,
+  from, setFrom, to, setTo,
+  search, setSearch,
+  onClear, hasFilters,
+  visibleCount, totalCount,
+}) {
+  return (
+    <div
+      className="card"
+      role="search"
+      aria-label="Filter transactions"
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        alignItems: 'flex-end',
+        marginBottom: '1rem',
+      }}
+    >
+      <label style={fieldStyle}>
+        <span style={fieldLabel}>Type</span>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          style={inputStyle}
+        >
+          <option value="ALL">All</option>
+          <option value="INCOME">Income</option>
+          <option value="EXPENSE">Expense</option>
+        </select>
+      </label>
+
+      <label style={fieldStyle}>
+        <span style={fieldLabel}>From</span>
+        <input
+          type="date"
+          value={from}
+          onChange={e => setFrom(e.target.value)}
+          style={inputStyle}
+        />
+      </label>
+
+      <label style={fieldStyle}>
+        <span style={fieldLabel}>To</span>
+        <input
+          type="date"
+          value={to}
+          onChange={e => setTo(e.target.value)}
+          style={inputStyle}
+        />
+      </label>
+
+      <label style={{ ...fieldStyle, flex: 1, minWidth: '180px' }}>
+        <span style={fieldLabel}>Search</span>
+        <input
+          type="search"
+          placeholder="Description contains…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          aria-label="Search by description"
+          style={inputStyle}
+        />
+      </label>
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={onClear}
+        disabled={!hasFilters}
+        style={{ height: '2.4rem' }}
+      >
+        Clear filters
+      </button>
+
+      <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+        Showing <b>{visibleCount}</b> of <b>{totalCount}</b>
+      </span>
+    </div>
+  )
+}
+
+// --- Inline style bags (kept in this file to avoid a new CSS module) ---
+const headerRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '1.5rem',
+}
+const badgeStyle = {
+  display: 'inline-block',
+  background: 'var(--gold)',
+  color: '#000',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  padding: '0.15rem 0.55rem',
+  borderRadius: 999,
+  marginLeft: '.6rem',
+  verticalAlign: 'middle',
+}
+const rowBtn = { padding: '0.35rem 0.75rem', fontSize: '0.8rem', marginLeft: '0.4rem' }
+const fieldStyle = { display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem' }
+const fieldLabel = { color: 'var(--text-muted)', fontWeight: 600 }
+const inputStyle = {
+  padding: '0.45rem 0.65rem',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  fontSize: '0.9rem',
+  minWidth: '10rem',
+}
+const editInputStyle = {
+  padding: '0.35rem 0.55rem',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  fontSize: '0.85rem',
+  width: '100%',
 }
