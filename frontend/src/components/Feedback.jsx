@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { link } from "react-router-dom"
 
 /** PROVIDED – reusable UI feedback components */
 
@@ -25,4 +26,20 @@ export function TodoBanner({ ticket, task }) {
       [TODO] <strong>{ticket}:</strong> {task}
     </div>
   )
+}
+
+export default function EmptyState({ title, body, ctaLabel, ctaTo, onCtaClick }) {
+  return (
+    <div className="empty-state">
+      <h3>{title}</h3>
+      <p>{body}</p>
+      {ctaLabel && (
+        ctaTo && ctaTo !== "#" ? (
+          <Link to={ctaTo} className="btn-primary">{ctaLabel}</Link>
+        ) : (
+          <button onClick={onCtaClick} className="btn-primary">{ctaLabel}</button>
+        )
+      )}
+    </div>
+  );
 }
